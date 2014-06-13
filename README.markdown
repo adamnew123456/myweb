@@ -20,6 +20,10 @@ There are currently two frontends to myweb:
  - `myweb-web` is an HTML frontend powered by the wsgiref server. It can be
    accessed at port 8080 on localhost.
 
+Note that the web frontend handles restructuredtext if you have the docutils
+module installed (note that restructuredtext handling cannot be disabled if
+docutils is installed without modifying web.py).
+
 ## The myweb UI
 
 ### Searches
