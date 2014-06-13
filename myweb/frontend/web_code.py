@@ -4,37 +4,42 @@ Storage for all of the HTML/Javascript which powers the web frontend.
 
 NOT_FOUND_PAGE = b'Not Found'
 
+AJAX = b'''
+function ajax(uri, data, headers, on_ready) {
+    var xhr = new XMLHttpRequest();
+
+    xhr.onreadystatechange = (function() {
+        if (xhr.readyState == 4) {
+            on_ready(xhr.responseText);
+        }
+    });
+
+    xhr.open('POST', uri, true);
+    for (var key in headers) {
+        xhr.setRequestHeader(key, headers[key].toString()); 
+    }
+
+    xhr.send(data);
+}
+'''
+
 ###############################################################################
 
 SEARCH_PAGE = b'''
 <html>
     <head><title>MyWeb Search</title></head>
     <body>
-        <input type="text" id="query" style="width:100%" onkeyup="handle_keypress();" /> <br/>
+        <input type="text" id="query" style="width:100%" onkeyup="handle_keypress(event);" /> <br/>
         <ul id="results">
         </ul>
-        <input type="button" style="width:100%" onclick="do_new();" /><br/>
+        <input type="button" value="Create" style="width:100%" onclick="do_new();" /><br/>
         <script>
+%AJAX%
+
 function handle_keypress(event) {
     if (event.keyCode == 13) { // Test for the Enter key
         do_search();
     }
-}
-
-function ajax(uri, data, headers, on_ready) {
-    var xhr = new XMLHttpRequest();
-
-    for (var key in headers) {
-        xhr.setRequestHeader(key, headers[key].toString());
-    }
-
-    xhr.onreadystatechange = function() {
-        if (xhr.readyState == 4) {
-            callback(xhr.responseText);
-        }
-    }
-    xhr.open('GET', uri, true);
-    xhr.send(data);
 }
 
 function do_new() {
@@ -43,23 +48,22 @@ function do_new() {
 
 function do_search() {
     var query = document.getElementById("query").value;
-    var query_uri = '/ajaz/query';
     var query_body = JSON.stringify({'query': query});
 
-    ajax(query_uri, query_body, {
+    ajax('/ajax/query', query_body, {
             'Content-Type': 'application/json',
             'Content-Length': query_body.length
         },
     (function(result_text) {
         var result = JSON.parse(result_text);
+
         if (result['was-error']) {
             alert("Malformed query");
         } else {
             var articles = result['articles'];
             var result_list = document.getElementById('results');
 
-            while (result_list.firstChild)
-            {
+            while (result_list.firstChild) {
                 result_list.removeChild(result_list.firstChild);
             }
 
@@ -82,7 +86,7 @@ function do_search() {
         </script>
     </body>
 </html>
-'''
+'''.replace(b'%AJAX%', AJAX)
 
 ###############################################################################
 
@@ -91,39 +95,23 @@ NEW_PAGE = b'''
     <head><title>MyWeb - New Article</title></head>
     <body>
         <input type="text" style="width:100%" id="uri" /><br/>
-        <textarea id="content" style="width:100%;height:90%" /><br/>
+        <textarea id="content" style="width:100%;height:75%"> </textarea> <br/>
         <input type="text" style="width:100%" id="tags" /><br/>
         <input type="button" value="Submit" style="width:100%" onclick="do_submit();" />
         <script>
-
-function ajax(uri, data, headers, on_ready) {
-    var xhr = new XMLHttpRequest();
-
-    for (var key in headers) {
-        xhr.setRequestHeader(key, headers[key].toString());
-    }
-
-    xhr.onreadystatechange = function() {
-        if (xhr.readyState == 4) {
-            callback(xhr.responseText);
-        }
-    }
-    xhr.open('GET', uri, true);
-    xhr.send(data);
-}
+%AJAX%
 
 function do_submit() {
     var article_uri = document.getElementById("uri").value;
     var article_content = document.getElementById("content").value;
-    var article_raw_tags = document.getElementById("tags");
+    var article_raw_tags = document.getElementById("tags").value;
     var article_tags = article_raw_tags.split(/[ \\t]/);
 
-    var request_uri = '/ajax/submit-new';
     var request_body = JSON.stringify({
-            'uri': article_uri, 'content': article_content, '
-            tags': article_tags})
+            'uri': article_uri, 'content': article_content,
+            'tags': article_tags})
 
-    ajax(request_uri, request_body, {
+    ajax('/ajax/submit-new', request_body, {
             'Content-Type': 'application/json',
             'Content-Length': request_body.length
         },
@@ -139,33 +127,26 @@ function do_submit() {
         </script>
     </body>
 </html>
-'''
+'''.replace(b'%AJAX%', AJAX)
 
 ################################################################################
 
-EDIT_PAGE = r'''
+EDIT_PAGE = b'''
 <html>
-    <head><title>MyWeb - Edi Article</title></head>
-    <body onload="load_article_content();">
-        <input type="text" style="width:100%" id="uri" /><br/>
-        <textarea id="content" style="width:100%;height:90%" /><br/>
+    <head><title>MyWeb - Edit Article</title></head>
+    <body>
+        <h1 id="uri"> </h1>
+        <textarea id="content" style="width:100%;height:75%" ></textarea><br/>
         <input type="text" style="width:100%" id="tags" /><br/>
         <input type="button" value="Submit" style="width:100%" onclick="do_submit();" />
         <script>
-function ajax(uri, data, headers, on_ready) {
-    var xhr = new XMLHttpRequest();
+%AJAX%
 
-    for (var key in headers) {
-        xhr.setRequestHeader(key, headers[key].toString()); 
-    }
-
-    xhr.onreadystatechange = function() {
-        if (xhr.readyState == 4) {
-            callback(xhr.responseText);
-        }
-    }
-    xhr.open('GET', uri, true);
-    xhr.send(data);
+function escapeHTML(s) { 
+    return s.replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
 }
 
 function load_article_content() {
@@ -173,8 +154,9 @@ function load_article_content() {
     // componets[0] == ""
     // components[1] == "edit"
     // components[2] == <article-uri>
+    var uri = components.slice(2).join('/');
 
-    var request_body = JSON.stringify({'uri': decodeURIComponent(components[2])});
+    var request_body = JSON.stringify({'uri': decodeURIComponent(uri)});
     ajax('/ajax/get-article', request_body, {
             'Content-Type': 'application/json',
             'Content-Length': request_body.length
@@ -182,8 +164,10 @@ function load_article_content() {
     (function(result_text) {
         var result = JSON.parse(result_text);
         if (result['was-error']) {
-            alert("Viewing a non-existant URL - please close this page");
+            alert("Viewing a non-existant URL - opening new page");
+            window.location.pathname = '/new';
         } else {
+            document.getElementById('uri').innerHTML = escapeHTML(decodeURIComponent(uri));
             document.getElementById('content').value = result['raw-content'];
             document.getElementById('tags').value = result['tags'].join(' ');
         }
@@ -195,60 +179,47 @@ function do_submit() {
     var article_uri = decodeURIComponent(components[2]);
 
     var article_content = document.getElementById("content").value;
-    var article_raw_tags = document.getElementById("tags");
+    var article_raw_tags = document.getElementById("tags").value;
     var article_tags = article_raw_tags.split(/[ \\t]/);
 
-    var request_uri = '/ajax/submit-edit';
     var request_body = JSON.stringify({
-            'uri': article_uri, 'content': article_content, '
-            tags': article_tags})
+            'uri': article_uri, 'content': article_content,
+            'tags': article_tags})
 
-    ajax(request_uri, request_body, {
+    ajax('/ajax/submit-edit', request_body, {
             'Content-Type': 'application/json',
             'Content-Length': request_body.length
         },
     (function(result_text) {
         var result = JSON.parse(result_text);
         if (result['was-error']) {
-            alert("That URL already has no article in the database");
+            alert("That URL already has an article in the database");
         } else {
             alert("Article updated successfully.");
         }
     }));
 }
+
+load_article_content();
         </script>
     </body>
 </html>
-'''
+'''.replace(b'%AJAX%', AJAX)
 
 ################################################################################
 
-VIEW_PAGE = r'''
+VIEW_PAGE = b'''
 <html>
-    <head><title>MyWeb - Edi Article</title></head>
-    <body onload="load_article_content();">
-        <input type="text" style="width:100%" id="uri" /><br/>
-        <div id="content" style="width:100%;height:90%" /><br/>
-        <i id="tags" /><br/>
+    <head><title>MyWeb - View Article</title></head>
+    <body>
+        <h1 id="uri"> </h1>
+        <div id="content" style="width:100%"> </div><br/>
+        <h3 id="tags"></h3>
         <input type="button" value="Edit" style="width:30%"" onclick="do_edit();" />
         <input type="button" value="Refresh" style="width:30%" onclick="load_article_content();" />
         <input type="button" value="Delete" style="width:30%" onclick="do_delete();" />
         <script>
-function ajax(uri, data, headers, on_ready) {
-    var xhr = new XMLHttpRequest();
-
-    for (var key in headers) {
-        xhr.setRequestHeader(key, headers[key].toString()); 
-    }
-
-    xhr.onreadystatechange = function() {
-        if (xhr.readyState == 4) {
-            callback(xhr.responseText);
-        }
-    }
-    xhr.open('GET', uri, true);
-    xhr.send(data);
-}
+%AJAX%
 
 function escapeHTML(s) { 
     return s.replace(/&/g, '&amp;')
@@ -262,8 +233,9 @@ function load_article_content() {
     // componets[0] == ""
     // components[1] == "view"
     // components[2] == <article-uri>
+    var uri = components.slice(2).join('/');
 
-    var request_body = JSON.stringify({'uri': decodeURIComponent(components[2])});
+    var request_body = JSON.stringify({'uri': decodeURIComponent(uri)});
     ajax('/ajax/get-article', request_body, {
             'Content-Type': 'application/json',
             'Content-Length': request_body.length
@@ -271,17 +243,30 @@ function load_article_content() {
     (function(result_text) {
         var result = JSON.parse(result_text);
         if (result['was-error']) {
-            alert("Viewing a non-existant URL - please close this page");
+            alert("Viewing a non-existant URL - opening new page");
+            window.location.pathname = '/new';
         } else {
+            document.getElementById('uri').innerHTML = escapeHTML(decodeURIComponent(uri));
             document.getElementById('content').innerHTML = result['html-content'];
-            document.getElementById('tags').innerHTML = escapeHTML(result[tags'].join(' '));
+
+            var tags_elem = document.getElementById('tags');
+            tags_elem.innerHTML = '';
+            for (var i = 0; i < result['tags'].length; i++) {
+                var tag = result['tags'][i];
+                tags_elem.innerHTML += '(' + escapeHTML(tag) + ') ';
+            }
         }
     }));
 }
 
 function do_edit() {
     var components = window.location.pathname.split('/');
-    window.location.pathname = '/edit/' + components[2];
+    // componets[0] == ""
+    // components[1] == "view"
+    // components[2] == <article-uri>
+    var uri = components.slice(2).join('/');
+
+    window.location.pathname = '/edit/' + uri;
 }
 
 function do_delete() {
@@ -289,23 +274,25 @@ function do_delete() {
     // componets[0] == ""
     // components[1] == "view"
     // components[2] == <article-uri>
+    var uri = components.slice(2).join('/');
 
-    var request_body = JSON.stringify({'uri': decodeURIComponent(components[2])});
-    ajax('/ajax/get-article', request_body, {
+    var request_body = JSON.stringify({'uri': decodeURIComponent(uri)});
+    ajax('/ajax/submit-delete', request_body, {
             'Content-Type': 'application/json',
             'Content-Length': request_body.length
         },
     (function(result_text) {
         var result = JSON.parse(result_text);
         if (result['was-error']) {
-            alert("Viewing a non-existant URL - please close this page");
+            alert("Failed to delete");
         } else {
-            document.getElementById('content').innerHTML = result['html-content'];
-            document.getElementById('tags').innerHTML = escapeHTML(result[tags'].join(' '));
+            alert("Successfully deleted this article - please close this window");
         }
     }));
 }
+
+load_article_content();
         </script>
     </body>
 </html>
-'''
+'''.replace(b'%AJAX%', AJAX)

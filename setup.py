@@ -8,7 +8,7 @@ setup(name='myweb',
              'myweb-web = myweb.frontend.web:main']
     },
     author = 'Adam Marchetti',
-    version = '0.1',
+    version = '0.2',
     description = 'Hyperlinked website commentary',
     author_email = 'adamnew123456@gmail.com',
     keywords = ['web', 'commenary', 'hyperlink'],
