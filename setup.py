@@ -4,7 +4,8 @@ setup(name='myweb',
     packages = ['myweb', 'myweb.frontend', 'myweb.backend'],
     entry_points = {
         'console_scripts':
-            ['myweb-tk = myweb.frontend.tk:main']
+            ['myweb-tk = myweb.frontend.tk:main',
+             'myweb-web = myweb.frontend.web:main']
     },
     author = 'Adam Marchetti',
     version = '0.1',

@@ -150,7 +150,10 @@ def fold_operators(operators, operands):
         first = operands.pop()
         operands.append(And(second, first))
 
-    return operands.pop()
+    try:
+        return operands.pop()
+    except IndexError:
+        raise SyntaxError('Empty query')
 
 def wordlist_to_node(wordlist):
     """
