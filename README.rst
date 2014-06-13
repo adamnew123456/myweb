@@ -15,8 +15,9 @@ Frontends
 
 There are currently two frontends which are available:
 
-- A Tkinter frontend.
-- A HTML frontend, powered by the ``wsgiref`` module.
+- A Tkinter frontend, which can be run as ``myweb-tk``.
+- A HTML frontend, powered by the ``wsgiref`` module, which can be run as
+  ``myweb-web``.
 
 Query Syntax
 ------------
