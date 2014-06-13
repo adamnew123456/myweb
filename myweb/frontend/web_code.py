@@ -97,9 +97,20 @@ NEW_PAGE = b'''
         <input type="text" style="width:100%" id="uri" /><br/>
         <textarea id="content" style="width:100%;height:75%"> </textarea> <br/>
         <input type="text" style="width:100%" id="tags" /><br/>
-        <input type="button" value="Submit" style="width:100%" onclick="do_submit();" />
+        <input type="button" value="Submit" style="width:45%" onclick="do_submit();" />
+        <input type="button" value="View" style="width:45%" onclick="do_view();" />
         <script>
 %AJAX%
+
+function do_view() {
+    var components = window.location.pathname.split('/');
+    // componets[0] == ""
+    // components[1] == "edit"
+    // components[2] == <article-uri>
+    var uri = components.slice(2).join('/');
+
+    window.location.pathname = '/view/' + uri;
+}
 
 function do_submit() {
     var article_uri = document.getElementById("uri").value;
@@ -138,7 +149,8 @@ EDIT_PAGE = b'''
         <h1 id="uri"> </h1>
         <textarea id="content" style="width:100%;height:75%" ></textarea><br/>
         <input type="text" style="width:100%" id="tags" /><br/>
-        <input type="button" value="Submit" style="width:100%" onclick="do_submit();" />
+        <input type="button" value="Submit" style="width:45%" onclick="do_submit();" />
+        <input type="button" value="View" style="width:45%" onclick="do_view();" />
         <script>
 %AJAX%
 
@@ -172,6 +184,16 @@ function load_article_content() {
             document.getElementById('tags').value = result['tags'].join(' ');
         }
     }));
+}
+
+function do_view() {
+    var components = window.location.pathname.split('/');
+    // componets[0] == ""
+    // components[1] == "edit"
+    // components[2] == <article-uri>
+    var uri = components.slice(2).join('/');
+
+    window.location.pathname = '/view/' + uri;
 }
 
 function do_submit() {
