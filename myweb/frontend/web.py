@@ -8,6 +8,12 @@ Note that, if you want to, you can use this with mod_wsgi instead of the
 builtin wsgiref server.
 """
 
+try:
+    import docutils.core
+    CAN_USE_DOCUTILS = True
+except ImportError:
+    CAN_USE_DOCUTILS = False
+
 import html
 import json
 import urllib.parse
@@ -41,24 +47,47 @@ def process_article_to_html(article_text, backlinks):
     """
     Produces HTML from an article, and its list of backlinks.
     """
-    article_html = '<pre>'
+    if CAN_USE_DOCUTILS:
+        # Assemble the document as restructuredtext, before asking docutils
+        # to convert it into HTML
+        article_rest = ''
 
-    for chunk in utils.get_link_chunks(article_text):
-        if isinstance(chunk, utils.Text):
-            article_html += html.escape(chunk.text)
-        else:
-            article_html += '<a href="/view/{url_title}"> {title} </a>'.format(
-                url_title=urllib.parse.quote(chunk.url, ''), title=chunk.url)
+        for chunk in utils.get_link_chunks(article_text):
+            if isinstance(chunk, utils.Text):
+                article_rest += chunk.text
+            else:
+                article_rest += '`{title} <{url_title}>`_'.format(
+                        url_title=urllib.parse.quote(chunk.url, ''), 
+                        title=chunk.url)
 
-    article_html += '<hr/><ul>'
-    for link in backlinks:
-        article_html += '''
-<li> <a href="/view/{url_title}"> {title} </a> </li>
-'''.format(url_title=urllib.parse.quote(link, ''), title=link).strip()
+        article_rest += '\n\n----------\n\n'
+        article_rest += '**Backlinks**\n\n'
 
-    article_html += '</ul></pre>'
+        for link in backlinks:
+            article_rest += '- `{title} <{url_title}>`_'.format(
+                    url_title=urllib.parse.quote(link, ''),
+                    title=link)
 
-    return article_html
+        return str(docutils.core.publish_string(article_rest, writer_name='html'), 'utf-8')
+    else:
+        article_html = '<pre>'
+
+        for chunk in utils.get_link_chunks(article_text):
+            if isinstance(chunk, utils.Text):
+                article_html += html.escape(chunk.text)
+            else:
+                article_html += '<a href="/view/{url_title}"> {title} </a>'.format(
+                    url_title=urllib.parse.quote(chunk.url, ''), title=chunk.url)
+
+        article_html += '<hr/><ul>'
+        for link in backlinks:
+            article_html += '''
+    <li> <a href="/view/{url_title}"> {title} </a> </li>
+    '''.format(url_title=urllib.parse.quote(link, ''), title=link).strip()
+
+        article_html += '</ul></pre>'
+
+        return article_html
 
 def generate_404(_, start_response):
     """
