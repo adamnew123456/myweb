@@ -1,14 +1,14 @@
 from setuptools import setup
 
 setup(name='myweb',
-    packages = ['myweb', 'myweb.frontend', 'myweb.backend'],
+    packages = ['myweb', 'myweb.frontend', 'myweb.backend', 'myweb.frontend.web', 'myweb.frontend.web.formatters'],
     entry_points = {
         'console_scripts':
             ['myweb-tk = myweb.frontend.tk:main',
-             'myweb-web = myweb.frontend.web:main']
+             'myweb-web = myweb.frontend.web.server:main']
     },
     author = 'Adam Marchetti',
-    version = '0.2',
+    version = '0.21',
     description = 'Hyperlinked website commentary',
     author_email = 'adamnew123456@gmail.com',
     keywords = ['web', 'commenary', 'hyperlink'],

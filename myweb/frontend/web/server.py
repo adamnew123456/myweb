@@ -8,48 +8,17 @@ Note that, if you want to, you can use this with mod_wsgi instead of the
 builtin wsgiref server.
 """
 
-try:
-    import docutils.core
-    CAN_USE_DOCUTILS = True
-except ImportError:
-    CAN_USE_DOCUTILS = False
-
-import configparser
 import html
+import importlib
 import json
-import os
-import os.path
+import os, os.path
 import urllib.parse
 from wsgiref import simple_server
 
-from myweb.backend import db, query, utils
-from myweb.frontend.web_code import *
+from myweb.backend import config, db, query, utils
+from myweb.frontend.web.html import *
 
-# The name of the configuration option, and its default
-CONFIG_PORT = ('port', '8080')
-CONFIG_FORMATTER = ('formatter', 'none')
-
-CONFIG_OPTS = CONFIG_PORT, CONFIG_FORMATTER
-def parse_config_file(path):
-    """
-    Handles the configuration file given by the file, producing a dict.
-    """
-    # The configuration file is expected to have the following format:
-    #
-    #   [web]
-    #   port = 8080
-    #   formatter = docutils # or 'none'
-    config = configparser.ConfigParser()
-    config.read(path)
-
-    if 'web' not in config:
-        return dict([CONFIG_PORT, CONFIG_FORMATTER])
-    web_opts = config['web']
-
-    options = {}
-    for opt_name, opt_default in CONFIG_OPTS:
-        options[opt_name] = web_opts.get(opt_name, opt_default)
-    return options
+FORMAT_TO_HTML = None
 
 def make_headers(header_dict):
     """
@@ -71,52 +40,6 @@ def make_headers(header_dict):
             headers.append((header_name, str(header_raw_value)))
 
     return headers
-
-def process_article_to_html(article_text, backlinks):
-    """
-    Produces HTML from an article, and its list of backlinks.
-    """
-    if CAN_USE_DOCUTILS:
-        # Assemble the document as restructuredtext, before asking docutils
-        # to convert it into HTML
-        article_rest = ''
-
-        for chunk in utils.get_link_chunks(article_text):
-            if isinstance(chunk, utils.Text):
-                article_rest += chunk.text
-            else:
-                article_rest += '`{title} <{url_title}>`_'.format(
-                        url_title=urllib.parse.quote(chunk.url, ''), 
-                        title=chunk.url)
-
-        article_rest += '\n\n----------\n\n'
-        article_rest += '**Backlinks**\n\n'
-
-        for link in backlinks:
-            article_rest += '- `{title} <{url_title}>`_'.format(
-                    url_title=urllib.parse.quote(link, ''),
-                    title=link)
-
-        return str(docutils.core.publish_string(article_rest, writer_name='html'), 'utf-8')
-    else:
-        article_html = '<pre>'
-
-        for chunk in utils.get_link_chunks(article_text):
-            if isinstance(chunk, utils.Text):
-                article_html += html.escape(chunk.text)
-            else:
-                article_html += '<a href="/view/{url_title}"> {title} </a>'.format(
-                    url_title=urllib.parse.quote(chunk.url, ''), title=chunk.url)
-
-        article_html += '<hr/><ul>'
-        for link in backlinks:
-            article_html += '''
-    <li> <a href="/view/{url_title}"> {title} </a> </li>
-    '''.format(url_title=urllib.parse.quote(link, ''), title=link).strip()
-
-        article_html += '</ul></pre>'
-
-        return article_html
 
 def generate_404(_, start_response):
     """
@@ -192,8 +115,7 @@ def handle_ajax_get_article(request_body):
         article = db.get_article(article_uri)
         return {
             'raw-content': article.content,
-            'html-content': process_article_to_html(article.content,
-                    article.backlinks),
+            'html-content': FORMAT_TO_HTML(article.content, article.backlinks),
             'backlinks': list(article.backlinks),
             'tags': list(article.tags)}
     except KeyError:
@@ -340,26 +262,28 @@ def main():
         print('Cannot find suitable location for configuration file - set either $HOME or %APPDATA%')
         return
 
-    config_opts = parse_config_file(config_path)
+    # Load the relevant options from the configuration file, and do some
+    # validation of the configuration file as well
+    config_opts = config.load_config({'web': {'port': '8080', 'formatter': 'none'}})
+    web_opts = config_opts['web']
     try:
-        port = int(config_opts[CONFIG_PORT[0]])
+        port = int(web_opts['port'])
         if port > 65536 or port < 0:
-            raise ValueError
-    except ValueError:
-        print('Invalid value for port:', config_options[CONFIG_PORT[0]])
-        return
+            raise ValueError('Invalid port number: {}'.format(port))
 
-    global CAN_USE_DOCUTILS
-    if config_opts[CONFIG_FORMATTER[0]] not in ('docutils', 'none'):
-        print('Formatter must be either "docutils" or "none"')
-        return
-    elif config_opts[CONFIG_FORMATTER[0]] == 'docutils':
-        if not CAN_USE_DOCUTILS:
-            print('Failed to import docutils, even though you requested it')
+        global FORMAT_TO_HTML
+        formatter = web_opts['formatter']
+        try:
+            formatter_module = importlib.import_module(
+                    'myweb.frontend.web.formatters.' + formatter)
+            FORMAT_TO_HTML = formatter_module.to_html
+        except ImportError as ex:
+            print('Failed to import formatter:', str(ex))
             return
-    elif config_opts[CONFIG_FORMATTER[0]] == 'none':
-        CAN_USE_DOCUTILS = False
+    except ValueError as ex:
+        print(str(ex))
+        return
 
-    db.load_database(db.DEFAULT_DB)
+    db.load_database(config_opts['myweb']['db'])
     http = simple_server.make_server('', port, application)
     http.serve_forever()

@@ -2,7 +2,7 @@
 A tkinter-based frontend for interacting with myweb.
 """
 
-from myweb.backend import db, query, utils
+from myweb.backend import config, db, query, utils
 
 import tkinter as tk
 import tkinter.ttk as ttk
@@ -458,15 +458,16 @@ def main():
     root = tk.Tk()
     root.wm_title('myweb')
 
-    if db.DEFAULT_DB is not None:
-        db.load_database(db.DEFAULT_DB)
-    else:
-        tk_message.showerror('Error', "Don't know where to store the database. "
-                "Please set  either %AppData% or $HOME.")
-        return
+    config_opts = config.load_config({'tk': {'theme': 'default'}})
+    db.load_database(config_opts['myweb']['db'])
 
+    theme_name = config_opts['tk']['theme']
     style = ttk.Style()
-    style.theme_use('alt')
+    if theme_name in style.theme_names():
+        style.theme_use(theme_name)
+    else:
+        tk_message.showerror('Configuration Error', 'Invalid theme "{}"'.format(theme_name))
+        style.theme_use('default')
 
     app = App(root)
     app.pack(fill=tk.BOTH, expand=True)
