@@ -14,13 +14,42 @@ try:
 except ImportError:
     CAN_USE_DOCUTILS = False
 
+import configparser
 import html
 import json
+import os
+import os.path
 import urllib.parse
 from wsgiref import simple_server
 
 from myweb.backend import db, query, utils
 from myweb.frontend.web_code import *
+
+# The name of the configuration option, and its default
+CONFIG_PORT = ('port', '8080')
+CONFIG_FORMATTER = ('formatter', 'none')
+
+CONFIG_OPTS = CONFIG_PORT, CONFIG_FORMATTER
+def parse_config_file(path):
+    """
+    Handles the configuration file given by the file, producing a dict.
+    """
+    # The configuration file is expected to have the following format:
+    #
+    #   [web]
+    #   port = 8080
+    #   formatter = docutils # or 'none'
+    config = configparser.ConfigParser()
+    config.read(path)
+
+    if 'web' not in config:
+        return dict([CONFIG_PORT, CONFIG_FORMATTER])
+    web_opts = config['web']
+
+    options = {}
+    for opt_name, opt_default in CONFIG_OPTS:
+        options[opt_name] = web_opts.get(opt_name, opt_default)
+    return options
 
 def make_headers(header_dict):
     """
@@ -303,6 +332,34 @@ def main():
     """
     Runs the WSGI server to start accepting requests.
     """
+    if 'HOME' in os.environ:
+        config_path = os.path.join(os.environ['HOME'], '.config', 'myweb.cfg')
+    elif 'APPDATA' in os.environ:
+        config_path = os.path.join(os.environ['APPDATA'], 'myweb.cfg')
+    else:
+        print('Cannot find suitable location for configuration file - set either $HOME or %APPDATA%')
+        return
+
+    config_opts = parse_config_file(config_path)
+    try:
+        port = int(config_opts[CONFIG_PORT[0]])
+        if port > 65536 or port < 0:
+            raise ValueError
+    except ValueError:
+        print('Invalid value for port:', config_options[CONFIG_PORT[0]])
+        return
+
+    global CAN_USE_DOCUTILS
+    if config_opts[CONFIG_FORMATTER[0]] not in ('docutils', 'none'):
+        print('Formatter must be either "docutils" or "none"')
+        return
+    elif config_opts[CONFIG_FORMATTER[0]] == 'docutils':
+        if not CAN_USE_DOCUTILS:
+            print('Failed to import docutils, even though you requested it')
+            return
+    elif config_opts[CONFIG_FORMATTER[0]] == 'none':
+        CAN_USE_DOCUTILS = False
+
     db.load_database(db.DEFAULT_DB)
-    http = simple_server.make_server('', 8080, application)
+    http = simple_server.make_server('', port, application)
     http.serve_forever()
