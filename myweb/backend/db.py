@@ -7,6 +7,7 @@ from collections import namedtuple
 import os
 import os.path
 import sqlite3
+import sys
 import zlib
 
 import myweb.backend.query as query
@@ -23,7 +24,8 @@ if 'HOME' in os.environ: # Unix-likes
 elif 'AppData' in os.environ: # Windows
     DEFAULT_DB = os.path.join(os.environ['AppData'], 'myweb.sqlite')
 else:
-    DEFAULT_DB = None
+    print('Cannot find suitable location for database - set either $HOME or %APPDATA%')
+    sys.exit(1)
 
 # How much to compress the article data by
 COMPRESS = 6
