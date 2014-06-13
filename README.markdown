@@ -12,6 +12,14 @@ reddit, but which would be:
  - __Searchable__ (Both by URL, but also by tags)
  - __Hyperlinked__ (To make referring to other commentary easier)
 
+## Frontends
+
+There are currently two frontends to myweb:
+
+ - `myweb-tk` is a Tkinter-based frontend, which is discussed below.
+ - `myweb-web` is an HTML frontend powered by the wsgiref server. It can be
+   accessed at port 8080 on localhost.
+
 ## The myweb UI
 
 ### Searches
