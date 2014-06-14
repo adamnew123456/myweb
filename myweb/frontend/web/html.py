@@ -103,12 +103,8 @@ NEW_PAGE = b'''
 %AJAX%
 
 function do_view() {
-    var components = window.location.pathname.split('/');
-    // componets[0] == ""
-    // components[1] == "edit"
-    // components[2] == <article-uri>
-    var uri = components.slice(2).join('/');
-
+    var article_uri = document.getElementById("uri").value;
+    var uri = encodeURIComponent(article_uri);
     window.location.pathname = '/view/' + uri;
 }
 
