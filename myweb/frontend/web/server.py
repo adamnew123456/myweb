@@ -12,7 +12,6 @@ import html
 import importlib
 import json
 import os, os.path
-import urllib.parse
 from wsgiref import simple_server
 
 from myweb.backend import config, db, query, utils
@@ -73,6 +72,9 @@ generate_new_page = generate_html_page(NEW_PAGE)
 generate_edit_page = generate_html_page(EDIT_PAGE)
 generate_view_page = generate_html_page(VIEW_PAGE)
 
+# Note that, whenever a query mentions a URI, that URI is *always* URI encoded.
+# The server should always encode outgoing URIs, while decoding incoming URIs
+
 def handle_ajax_query(request_body):
     """
     The /ajax/query request take in JSON of the following form:
@@ -87,7 +89,7 @@ def handle_ajax_query(request_body):
     query_text = request_body['query']
     try:
         parsed_query = query.parse_query(query_text)
-        article_list = list(db.execute_query(parsed_query))
+        article_list = [uri for uri in db.execute_query(parsed_query)]
         return {'was-error': False, 'articles': article_list}
     except SyntaxError:
         return {'was-error': True, 'articles': []}
@@ -207,11 +209,16 @@ def handle_ajax_request(environ, start_response):
     else:
         utf8_input = str(environ['wsgi.input'].read(content_length), 'utf-8')
         request_body = json.loads(utf8_input)
+        print('-----> Incoming JSON')
+        print(utf8_input)
 
         responder = AJAX_HANDLERS.get(ajax_request, lambda request_body: None)
         result = responder(request_body)
 
     json_response = bytes(json.dumps(result), 'utf-8')
+    print('<----- Outgoing JSON')
+    print(json.dumps(result))
+
     start_response('200 OK',
             make_headers({
                 'Content-Length': len(json_response),
