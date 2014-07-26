@@ -108,7 +108,7 @@ function do_view() {
 }
 
 function do_submit() {
-    var article_uri = document.getElementById("uri").value);
+    var article_uri = document.getElementById("uri").value;
     var article_content = document.getElementById("content").value;
     var article_raw_tags = document.getElementById("tags").value;
     var article_tags = article_raw_tags.split(/[ \\t]/);
