@@ -5,10 +5,11 @@ setup(name='myweb',
     entry_points = {
         'console_scripts':
             ['myweb-tk = myweb.frontend.tk:main',
-             'myweb-web = myweb.frontend.web.server:main']
+             'myweb-web = myweb.frontend.web.server:main',
+             'myweb-cli = myweb.frontend.cli:main']
     },
     author = 'Adam Marchetti',
-    version = '0.25',
+    version = '0.30',
     description = 'Hyperlinked website commentary',
     author_email = 'adamnew123456@gmail.com',
     keywords = ['web', 'commenary', 'hyperlink'],
