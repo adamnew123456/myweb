@@ -261,17 +261,10 @@ def main():
     """
     Runs the WSGI server to start accepting requests.
     """
-    if 'HOME' in os.environ:
-        config_path = os.path.join(os.environ['HOME'], '.config', 'myweb.cfg')
-    elif 'APPDATA' in os.environ:
-        config_path = os.path.join(os.environ['APPDATA'], 'myweb.cfg')
-    else:
-        print('Cannot find suitable location for configuration file - set either $HOME or %APPDATA%')
-        return
-
     # Load the relevant options from the configuration file, and do some
     # validation of the configuration file as well
-    config_opts = config.load_config({'web': {'port': '8080', 'formatter': 'none'}})
+    config_opts = config.load_config({'web': 
+        {'port': '8080', 'formatter': 'none'}})
     web_opts = config_opts['web']
     try:
         port = int(web_opts['port'])
