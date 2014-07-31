@@ -5,8 +5,10 @@ A command-line based frontend for interacting with myweb.
 from myweb.backend import config, db, query, utils
 
 import argparse
+import os
 import re
 import sys
+import tempfile
 
 HELP = """myweb-cli - A command-line interface to myweb.
 Usage:
@@ -26,8 +28,11 @@ Commands:
     create URL [TAG...]
         Creates a new article with the given tag, and with the contents of
         the article coming from stdin.
-    edit URL
+    update URL
         Updates the content of the URL from the contents of stdin.
+    edit URL
+        Invokes $VISUAL (or $EDITOR) on the content of the given URL, and then
+        saves the result back into the database.
     set-tags URL [TAG...]
         Updates the list of tags for the URL.
     delete
@@ -88,8 +93,13 @@ def main():
     create_parser.add_argument('TAGS', nargs='+',
         help='The tags to give to the new article')
 
-    edit_parser = sub_args.add_parser('edit',
+    update_parser = sub_args.add_parser('update',
         help='Replaces the article for the URL by reading stdin')
+    update_parser.add_argument('URL',
+        help='A URL which exists in the database')
+
+    edit_parser = sub_args.add_parser('edit',
+        help='Invokes $VISUAL (or $EDITOR) to edit an article')
     edit_parser.add_argument('URL',
         help='A URL which exists in the database')
 
@@ -199,7 +209,7 @@ def main():
             print('Article for', arg_context.URL, 'already exists',
                 file=sys.stderr)
             return 1
-    elif arg_context.command == 'edit':
+    elif arg_context.command == 'update':
         config_opts = load_config()
         init_db(config_opts)
 
@@ -209,6 +219,43 @@ def main():
             links = utils.get_links(article)
             db.update_article(arg_context.URL, article, links, 
                 old_article.tags)
+        except KeyError:
+            print('Article for', arg_context.URL, 'does not exist',
+                file=sys.stderr)
+            return 1
+    elif arg_context.command == 'edit':
+        config_opts = load_config()
+        init_db(config_opts)
+
+        if not os.environ.get('VISUAL', ''):
+            if not os.environ.get('EDITOR', ''):
+                print('No setting for $VISUAL or $EDITOR', file=sys.stderr)
+                return 1
+            else:
+                editor = os.environ['EDITOR']
+        else:
+            editor = os.environ['VISUAL']
+
+        try:
+            article = db.get_article(arg_context.URL)
+
+            # Dump the article to a temp file, so that the editor has
+            # something to edit (we *could* pass the text in via stdin, but
+            # if the user screwed up, they would have no original copy to
+            # work from - you can't run :e! in Vim on stdin, for example).
+            with tempfile.NamedTemporaryFile(mode='w+') as article_file:
+                article_file.write(article.content)
+                article_file.flush()
+
+                os.system(editor + ' ' + article_file.name)
+
+                article_file.seek(0)
+                new_article_text = article_file.read()
+
+            links = utils.get_links(new_article_text)
+            db.update_article(arg_context.URL, new_article_text, links,
+                article.tags)
+                
         except KeyError:
             print('Article for', arg_context.URL, 'does not exist',
                 file=sys.stderr)
