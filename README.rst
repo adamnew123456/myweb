@@ -13,11 +13,13 @@ around my experiences with Reddit, but with different goals:
 Frontends
 ---------
 
-There are currently two frontends which are available:
+There are currently three frontends which are available:
 
 - A Tkinter frontend, which can be run as ``myweb-tk``.
 - A HTML frontend, powered by the ``wsgiref`` module, which can be run as
   ``myweb-web``.
+- A command-line frontend, which can be run as ``myweb-cli``. You can run 
+  ``myweb-cli help`` to read up on how to use it.
 
 Query Syntax
 ------------
