@@ -209,15 +209,11 @@ def handle_ajax_request(environ, start_response):
     else:
         utf8_input = str(environ['wsgi.input'].read(content_length), 'utf-8')
         request_body = json.loads(utf8_input)
-        print('-----> Incoming JSON')
-        print(utf8_input)
 
         responder = AJAX_HANDLERS.get(ajax_request, lambda request_body: None)
         result = responder(request_body)
 
     json_response = bytes(json.dumps(result), 'utf-8')
-    print('<----- Outgoing JSON')
-    print(json.dumps(result))
 
     start_response('200 OK',
             make_headers({

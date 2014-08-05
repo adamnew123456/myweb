@@ -74,7 +74,7 @@ function do_search() {
                 var link_node = document.createElement('a');
                 var text_node = document.createTextNode(uri);
 
-                link_node.href = '/view/' + uri;
+                link_node.href = '/view/' + encodeURIComponent(uri);
 
                 result_list.appendChild(item_node);
                 item_node.appendChild(link_node);
@@ -114,7 +114,8 @@ function do_submit() {
     var article_tags = article_raw_tags.split(/[ \\t]/);
 
     var request_body = JSON.stringify({
-            'uri': article_uri, 'content': article_content,
+            'uri': decodeURIComponent(article_uri),
+            'content': article_content,
             'tags': article_tags})
 
     ajax('/ajax/submit-new', request_body, {
@@ -163,7 +164,7 @@ function load_article_content() {
     // components[2] == <article-uri>
     var uri = components.slice(2).join('/');
 
-    var request_body = JSON.stringify({'uri': uri});
+    var request_body = JSON.stringify({'uri': decodeURIComponent(uri)});
     ajax('/ajax/get-article', request_body, {
             'Content-Type': 'application/json',
             'Content-Length': request_body.length
@@ -174,7 +175,7 @@ function load_article_content() {
             alert("Viewing a non-existant URL - opening new page");
             window.location.pathname = '/new';
         } else {
-            document.getElementById('uri').innerHTML = escapeHTML(uri);
+            document.getElementById('uri').innerHTML = escapeHTML(decodeURIComponent(uri));
             document.getElementById('content').value = result['raw-content'];
             document.getElementById('tags').value = result['tags'].join(' ');
         }
@@ -203,7 +204,8 @@ function do_submit() {
     var article_tags = article_raw_tags.split(/[ \\t]/);
 
     var request_body = JSON.stringify({
-            'uri': uri, 'content': article_content,
+            'uri': decodeURIComponent(uri), 
+            'content': article_content,
             'tags': article_tags})
 
     ajax('/ajax/submit-edit', request_body, {
@@ -255,7 +257,7 @@ function load_article_content() {
     // components[2] == <article-uri>
     var uri = components.slice(2).join('/');
 
-    var request_body = JSON.stringify({'uri': uri});
+    var request_body = JSON.stringify({'uri': decodeURIComponent(uri)});
     ajax('/ajax/get-article', request_body, {
             'Content-Type': 'application/json',
             'Content-Length': request_body.length
@@ -266,7 +268,7 @@ function load_article_content() {
             alert("Viewing a non-existant URL - opening new page");
             window.location.pathname = '/new';
         } else {
-            document.getElementById('uri').innerHTML = escapeHTML(uri);
+            document.getElementById('uri').innerHTML = escapeHTML(decodeURIComponent(uri));
             document.getElementById('content').innerHTML = result['html-content'];
 
             var tags_elem = document.getElementById('tags');
@@ -296,7 +298,7 @@ function do_delete() {
     // components[2] == <article-uri>
     var uri = components.slice(2).join('/');
 
-    var request_body = JSON.stringify({'uri': uri});
+    var request_body = JSON.stringify({'uri': decodeURIComponent(uri)});
     ajax('/ajax/submit-delete', request_body, {
             'Content-Type': 'application/json',
             'Content-Length': request_body.length

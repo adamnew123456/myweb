@@ -9,7 +9,7 @@ setup(name='myweb',
              'myweb-cli = myweb.frontend.cli:main']
     },
     author = 'Adam Marchetti',
-    version = '0.31',
+    version = '0.32',
     description = 'Hyperlinked website commentary',
     author_email = 'adamnew123456@gmail.com',
     keywords = ['web', 'commenary', 'hyperlink'],
